@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	stdlog "log"
 	"net/http"
@@ -16,6 +17,9 @@ import (
 	flags "github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 )
+
+//go:embed templates
+var templateFS embed.FS
 
 // MongoOpts is all the mongo specific connection options
 type OpenVPNOpts struct {
@@ -91,6 +95,7 @@ func main() {
 	}()
 
 	r.HandleFunc("/status", GetVPNStatus)
+	r.HandleFunc("/", GetIndex)
 	//r.HandleFunc("/running", mongoslow.RunningQueryTableHandler(slow))
 	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
 	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))

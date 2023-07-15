@@ -1,6 +1,9 @@
 package main
 
-import "net/http"
+import (
+	"html/template"
+	"net/http"
+)
 
 // @Title
 // @Description
@@ -8,6 +11,11 @@ import "net/http"
 // @Update
 
 func PostCredentials(w http.ResponseWriter, r *http.Request) {
+}
+
+func GetIndex(w http.ResponseWriter, r *http.Request) {
+	t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
+	t.Execute(w, nil)
 }
 
 func GetVPNStatus(w http.ResponseWriter, r *http.Request) {

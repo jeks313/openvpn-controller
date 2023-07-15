@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>OpenVPN Controller</title>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <script defer src="https://use.fontawesome.com/releases/v6.4.0/js/all.js"></script>
+	<script src="https://unpkg.com/htmx.org@1.9.3" integrity="sha384-lVb3Rd/Ca0AxaoZg5sACe8FJKF0tnUgR2Kd7ehUOG5GCcROv5uBIZsOqovBAcWua" crossorigin="anonymous"></script>
+  <script>
+htmx.logger = function(elt, event, data) {
+    if(console) {
+        console.log(event, elt, data);
+    }
+}
+  </script>
+</head>
+<body>
+<section class="section">
+    <div class="container">
+      <div class="columns">
+        <div class="column">
+          <form class="box">
+            <div class="field">
+              <label class="label">Username</label>
+              <div class="control has-icons-left has-icons-right">
+                <input name="username" class="input is-success" type="text" placeholder="Text input" value="chyde">
+                <span class="icon is-small is-left">
+                  <i class="fas fa-user"></i>
+                </span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Password</label>
+              <div class="control has-icons-left has-icons-right">
+                <input name="password" class="input is-danger" type="password" placeholder="Password" value="">
+                <span class="icon is-small is-left">
+                  <i class="fas fa-lock"></i>
+								</span>
+							</div>
+						</div>
+
+              <div class="field">
+                <label class="label">OTP</label>
+                <div class="control has-icons-left">
+									<input name="one-time-code" autocomplete="one-time-code" class="input is-success" type="text" placeholder="123 456" value="">
+									<span class="icon is-small is-left">
+										<i class="fas fa-lock"></i>
+									</span>
+                </div>
+              </div>
+
+              <div class="field is-grouped">
+                <div class="control">
+                  <button class="button is-link" hx-get="http://plasma:9172/status" hx-trigger="click" hx-target="#status" hx-swap="innerHTML">Connect</button>
+                </div>
+              </div>
+            </form>
+        </div>
+        <div class="column">
+          <div class="box">
+						<div class="icon-text">
+							<span class="icon has-text-success">
+								<i class="fas fa-check-square"></i>
+							</span>
+							<span>OpenVPN is running</span>
+							<div id="status">blah</div>
+						</div>
+          </div>
+          <div class="box">
+						<div class="icon-text">
+							<span class="icon has-text-success">
+								<i class="fas fa-check-square"></i>
+							</span>
+							<span>DNS for vcr1sandbox.absolute.com is 1.2.3.4</span>
+						</div>
+          </div>
+          <div class="box">
+						<div class="icon-text">
+							<span class="icon has-text-success">
+								<i class="fas fa-check-square"></i>
+							</span>
+							<span>Ping vcr1sandbox.absolute.com in 53ms</span>
+						</div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </section>
+  </body>
+</html>
