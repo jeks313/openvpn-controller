@@ -53,7 +53,7 @@ htmx.logger = function(elt, event, data) {
 
               <div class="field is-grouped">
                 <div class="control">
-                  <button class="button is-link" hx-get="http://plasma:9172/status" hx-trigger="click" hx-target="#status" hx-swap="innerHTML">Connect</button>
+                  <button class="button is-link" hx-post="http://plasma:9172/connect" hx-trigger="click" hx-target="#log" hx-swap="innerHTML">Connect</button>
                 </div>
               </div>
             </form>
@@ -89,4 +89,14 @@ htmx.logger = function(elt, event, data) {
       </div>
     </section>
   </body>
+  <section class="section">
+    <div class="container">
+      <div class="columns">
+        <div class="column">
+          <div id="log">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </html>

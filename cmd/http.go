@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 )
@@ -10,14 +11,27 @@ import (
 // @Author
 // @Update
 
-func PostCredentials(w http.ResponseWriter, r *http.Request) {
+// PostConnect handles a connect post request from the UI, inputs are username, password and one-time-code
+func PostConnect(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "text/html")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Write([]byte("testing!"))
+
+	username := r.PostFormValue("username")
+	password := r.PostFormValue("password")
+	otp := r.PostFormValue("one-time-code")
+
+	w.Write([]byte(fmt.Sprintf("%s/%s/%s", username, password, otp)))
 }
 
+// GetIndex serves up the index page
 func GetIndex(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
 	t.Execute(w, nil)
 }
 
+// GetVPNStatus is currently a test thingumy
 func GetVPNStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/html")
 	w.Header().Set("Access-Control-Allow-Origin", "*")

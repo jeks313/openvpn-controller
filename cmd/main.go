@@ -21,7 +21,7 @@ import (
 //go:embed templates
 var templateFS embed.FS
 
-// MongoOpts is all the mongo specific connection options
+// OpenVPNOpts is all the mongo specific connection options
 type OpenVPNOpts struct {
 }
 
@@ -96,6 +96,7 @@ func main() {
 
 	r.HandleFunc("/status", GetVPNStatus)
 	r.HandleFunc("/", GetIndex)
+	r.HandleFunc("/connect", PostConnect)
 	//r.HandleFunc("/running", mongoslow.RunningQueryTableHandler(slow))
 	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
 	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))
