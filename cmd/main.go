@@ -90,7 +90,7 @@ func main() {
 		}
 	}()
 
-	//r.HandleFunc("/running.json", mongoslow.SlowQueryHandler(slow))
+	r.HandleFunc("/status", GetVPNStatus)
 	//r.HandleFunc("/running", mongoslow.RunningQueryTableHandler(slow))
 	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
 	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))
