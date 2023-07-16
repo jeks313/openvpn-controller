@@ -4,7 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	stdlog "log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,7 +15,6 @@ import (
 	"github.com/jeks313/go-mongo-slow-queries/pkg/options"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/server"
 	flags "github.com/jessevdk/go-flags"
-	"github.com/rs/zerolog"
 )
 
 //go:embed templates
@@ -31,20 +30,20 @@ var opts struct {
 	OpenVPN     OpenVPNOpts                `group:"OpenvVPN Options"`
 }
 
+var loggingLevel = new(slog.LevelVar)
+
 func main() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	stdlog.SetFlags(0)
-	stdlog.SetOutput(log)
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: loggingLevel}))
+	slog.SetDefault(log)
 
 	_, err := flags.ParseArgs(&opts, os.Args[1:])
 	if err != nil {
-		log.Error().Err(err).Msg("failed to parse command line arguments")
+		log.Error("failed to parse command line arguments", "error", err)
 		os.Exit(1)
 	}
 
 	if opts.Application.Debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		loggingLevel.Set(slog.LevelDebug)
 	}
 
 	if opts.Application.Version {
@@ -57,7 +56,7 @@ func main() {
 	r.Use(handlers.CompressHandler)
 
 	// setup logging
-	server.Log(r, log)
+	server.Log(r)
 
 	// default end points
 	server.Profiling(r, "/debug/pprof")
@@ -88,7 +87,7 @@ func main() {
 		select {
 		case <-c:
 			cancel()
-			log.Info().Msg("interrupt, shutting down ...")
+			log.Info("interrupt, shutting down ...")
 			srv.Shutdown(ctx)
 		case <-ctx.Done():
 		}
@@ -101,12 +100,12 @@ func main() {
 	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
 	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))
 
-	log.Info().Int("port", opts.Port).Msg("started server ...")
+	log.Info("started server ...", "port", opts.Port)
 
 	if err = srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Error().Err(err).Msg("failed to start http server")
+		log.Error("failed to start http server", "error", err)
 		os.Exit(1)
 	}
 
-	log.Info().Msg("stopped")
+	log.Info("stopped")
 }

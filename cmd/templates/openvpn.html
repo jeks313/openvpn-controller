@@ -59,31 +59,18 @@ htmx.logger = function(elt, event, data) {
             </form>
         </div>
         <div class="column">
+          {{ range .Checks }}
+          {{ block "check-list-item" . }}
           <div class="box">
 						<div class="icon-text">
-							<span class="icon has-text-success">
-								<i class="fas fa-check-square"></i>
+							<span class="icon">
+                <i class="fas {{ .Icon }}"></i>
 							</span>
-							<span>OpenVPN is running</span>
-							<div id="status">blah</div>
+              <span>{{ .Status }}</span>
 						</div>
           </div>
-          <div class="box">
-						<div class="icon-text">
-							<span class="icon has-text-success">
-								<i class="fas fa-check-square"></i>
-							</span>
-							<span>DNS for vcr1sandbox.absolute.com is 1.2.3.4</span>
-						</div>
-          </div>
-          <div class="box">
-						<div class="icon-text">
-							<span class="icon has-text-success">
-								<i class="fas fa-check-square"></i>
-							</span>
-							<span>Ping vcr1sandbox.absolute.com in 53ms</span>
-						</div>
-          </div>
+          {{ end }}
+          {{ end }}
         </div>
       </div>
       </div>
@@ -93,7 +80,9 @@ htmx.logger = function(elt, event, data) {
     <div class="container">
       <div class="columns">
         <div class="column">
-          <div id="log">
+          <div class="box">
+            <div id="log">
+            </div>
           </div>
         </div>
       </div>

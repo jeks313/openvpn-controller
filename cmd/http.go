@@ -25,10 +25,23 @@ func PostConnect(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("%s/%s/%s", username, password, otp)))
 }
 
+// Check is a sidebar item that shows a status of a particular health check item
+type Check struct {
+	Icon   string
+	Status string
+}
+
 // GetIndex serves up the index page
 func GetIndex(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
-	t.Execute(w, nil)
+	checks := map[string][]Check{
+		"Checks": {
+			{Icon: "fa-times-square has-text-success", Status: "OpenVPN is stopped"},
+			{Icon: "fa-times-square", Status: "DNS for vcr1sandbox1.absolute.com is unknown"},
+			{Icon: "fa-times-square", Status: "Ping for vcr1sandbox1.absolute.com is unknown"},
+		},
+	}
+	t.Execute(w, checks)
 }
 
 // GetVPNStatus is currently a test thingumy
