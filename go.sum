@@ -103,6 +103,12 @@ github.com/jeks313/go-mongo-slow-queries v0.0.0-20220117173135-0ab0f31d442e h1:v
 github.com/jeks313/go-mongo-slow-queries v0.0.0-20220117173135-0ab0f31d442e/go.mod h1:C7Nyn0I5SwAEEcLKzqqc/OtgggXNGmkZ24CNrPEIIa0=
 github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716032755-da06374e77bb h1:PbS6+6+fUlf9bghBJw/os8/SqxhOpOyiRZ0wUm8zr4w=
 github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716032755-da06374e77bb/go.mod h1:C7Nyn0I5SwAEEcLKzqqc/OtgggXNGmkZ24CNrPEIIa0=
+github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716033503-eb2f093c9813 h1:dWYhtdNmqwE0z3c6x49tE6li/Go67v+MRUTUyoHGoJ8=
+github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716033503-eb2f093c9813/go.mod h1:C7Nyn0I5SwAEEcLKzqqc/OtgggXNGmkZ24CNrPEIIa0=
+github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716170804-c3aa4df7460d h1:Bv8C3ULo0JypKNkpGw9Vlr6VFG0WekAtmoWBoGEcAVM=
+github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716170804-c3aa4df7460d/go.mod h1:C7Nyn0I5SwAEEcLKzqqc/OtgggXNGmkZ24CNrPEIIa0=
+github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716171228-97201d31333d h1:cR7IN6Tv1iVZVUcpkc3QG7HTw9adhtyzldTkJ0Sb8VY=
+github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716171228-97201d31333d/go.mod h1:C7Nyn0I5SwAEEcLKzqqc/OtgggXNGmkZ24CNrPEIIa0=
 github.com/jessevdk/go-flags v1.5.0 h1:1jKYvbxEjfUl0fmqTCOfonvskHHXMjBySTLW4y9LFvc=
 github.com/jessevdk/go-flags v1.5.0/go.mod h1:Fw0T6WPc1dYxT4mKEZRfG5kJhaTDP9pj1c2EWnYs/m4=
 github.com/joho/godotenv v1.4.0 h1:3l4+N6zfMWnkbPEXKng2o2/MR5mSwTrBih4ZEkkz1lg=

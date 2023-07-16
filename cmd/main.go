@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -33,7 +34,9 @@ var opts struct {
 var loggingLevel = new(slog.LevelVar)
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: loggingLevel}))
+	history := NewLogHistory(100)
+	mw := io.MultiWriter(os.Stderr, history)
+	log := slog.New(slog.NewTextHandler(mw, &slog.HandlerOptions{Level: loggingLevel}))
 	slog.SetDefault(log)
 
 	_, err := flags.ParseArgs(&opts, os.Args[1:])
@@ -96,6 +99,7 @@ func main() {
 	r.HandleFunc("/status", GetVPNStatus)
 	r.HandleFunc("/", GetIndex)
 	r.HandleFunc("/connect", PostConnect)
+	r.HandleFunc("/log", GetLog(history))
 	//r.HandleFunc("/running", mongoslow.RunningQueryTableHandler(slow))
 	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
 	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))

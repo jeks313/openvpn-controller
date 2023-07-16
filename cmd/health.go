@@ -18,7 +18,7 @@ type Pinger struct {
 }
 
 // NewPinger is host you would like to ping while VPN is up
-func NewPinger(host) *Pinger {
+func NewPinger(host string) *Pinger {
 	return &Pinger{Host: host}
 }
 
@@ -29,6 +29,6 @@ type DNSer struct {
 }
 
 // NewDNSer host you would like to run DNS checks on when VPN is up
-func NewDNSer(host) *DNSer {
+func NewDNSer(host string) *DNSer {
 	return &DNSer{Host: host}
 }

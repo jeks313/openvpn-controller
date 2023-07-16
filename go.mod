@@ -5,7 +5,6 @@ go 1.21rc2
 require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716032755-da06374e77bb
 	github.com/jessevdk/go-flags v1.5.0
 )
 
@@ -24,6 +23,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/hashicorp/serf v0.9.6 // indirect
+	github.com/jeks313/go-mongo-slow-queries v0.0.0-20230716171228-97201d31333d // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect

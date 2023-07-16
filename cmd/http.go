@@ -31,6 +31,16 @@ type Check struct {
 	Status string
 }
 
+// GetLog gets the log data from a log history circular buffer
+func GetLog(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "text/html")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Write([]byte(history.String()))
+	}
+}
+
 // GetIndex serves up the index page
 func GetIndex(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
