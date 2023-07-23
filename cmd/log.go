@@ -12,31 +12,39 @@ import (
 
 // LogHistory keeps a circular log of the last N lines of logs for output via the /log
 type LogHistory struct {
-	history *ring.Ring
-	length  int
+	History *ring.Ring
+	Length  int
 }
 
 // NewLogHistory records a circular buffer of log lines of length size
 func NewLogHistory(length int) *LogHistory {
 	h := &LogHistory{
-		history: ring.New(length),
-		length:  length,
+		History: ring.New(length),
+		Length:  length,
 	}
 	return h
 }
 
+// Write so that this satisfies the Writer interface so that we can use this in a MultiWriter
 func (h *LogHistory) Write(buf []byte) (n int, err error) {
-	h.history.Value = string(buf)
-	h.history = h.history.Next()
+	h.History.Value = string(buf)
+	h.History = h.History.Next()
 	return len(buf), nil
 }
 
+// String converts the full buffer to a single string output for display in a web page
 func (h *LogHistory) String() string {
 	var lines []string
-	h.history.Do(func(p interface{}) {
+	var b strings.Builder
+	h.History.Do(func(p interface{}) {
 		if p != nil {
 			lines = append(lines, string(p.(string)))
 		}
 	})
-	return strings.Join(lines, "")
+
+	for i := len(lines); i > 0; i-- {
+		b.WriteString(lines[i-1])
+		b.WriteString("<br>")
+	}
+	return b.String()
 }

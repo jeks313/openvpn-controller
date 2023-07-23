@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/options"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/server"
@@ -56,7 +55,7 @@ func main() {
 
 	// router
 	r := mux.NewRouter()
-	r.Use(handlers.CompressHandler)
+	// r.Use(handlers.CompressHandler)
 
 	// setup logging
 	server.Log(r)
@@ -96,10 +95,34 @@ func main() {
 		}
 	}()
 
-	r.HandleFunc("/status", GetVPNStatus)
-	r.HandleFunc("/", GetIndex)
-	r.HandleFunc("/connect", PostConnect)
+	var checks []Checker
+
+	sandboxPing := NewPing("vcr1sandbox1.absolute.com")
+	sandboxDNS := NewDNS("vcr1sandbox1.absolute.com")
+
+	checks = append(checks, sandboxPing)
+	checks = append(checks, sandboxDNS)
+
+	go func() {
+		for {
+			for _, check := range checks {
+				err := check.Check()
+				if err != nil {
+					slog.Error("failed to run check", "error", err)
+				}
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
+
+	vpn := NewOpenVPN("")
+
+	r.HandleFunc("/status", GetVPNStatus(checks))
+	r.HandleFunc("/", GetIndex(checks))
+	r.HandleFunc("/connect", PostConnect(vpn))
 	r.HandleFunc("/log", GetLog(history))
+	r.HandleFunc("/logstream", GetLogStream(history))
+	r.HandleFunc("/vpn", GetVPN(vpn))
 	//r.HandleFunc("/running", mongoslow.RunningQueryTableHandler(slow))
 	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
 	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))
