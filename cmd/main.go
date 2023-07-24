@@ -58,7 +58,7 @@ func main() {
 	// r.Use(handlers.CompressHandler)
 
 	// setup logging
-	server.Log(r)
+	// server.Log(r)
 
 	// default end points
 	server.Profiling(r, "/debug/pprof")
@@ -116,16 +116,19 @@ func main() {
 	}()
 
 	vpn := NewOpenVPN("")
+	display, err := NewDisplay("templates/openvpn.html")
+	if err != nil {
+		slog.Error("failed to initialize display", "error", err)
+		os.Exit(1)
+	}
 
-	r.HandleFunc("/status", GetVPNStatus(checks))
-	r.HandleFunc("/", GetIndex(checks))
+	r.HandleFunc("/status", GetVPNStatus(display, checks))
+	r.HandleFunc("/", GetIndex(display, checks))
 	r.HandleFunc("/connect", PostConnect(vpn))
 	r.HandleFunc("/log", GetLog(history))
+	r.HandleFunc("/updatews", GetUpdateWs(history))
 	r.HandleFunc("/logstream", GetLogStream(history))
 	r.HandleFunc("/vpn", GetVPN(vpn))
-	//r.HandleFunc("/running", mongoslow.RunningQueryTableHandler(slow))
-	//r.HandleFunc("/history.json", mongoslow.HistoryQueryHandler(slow))
-	//r.HandleFunc("/history", mongoslow.HistoryQueryTableHandler(slow))
 
 	log.Info("started server ...", "port", opts.Port)
 

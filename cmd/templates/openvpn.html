@@ -10,6 +10,7 @@
   <script src="https://unpkg.com/htmx.org@1.9.3"
     integrity="sha384-lVb3Rd/Ca0AxaoZg5sACe8FJKF0tnUgR2Kd7ehUOG5GCcROv5uBIZsOqovBAcWua"
     crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
   <script>
     htmx.logger = function (elt, event, data) {
       if (console) {
@@ -65,7 +66,8 @@
           </form>
         </div>
         {{ end }}
-        <div class="column" id="status" hx-trigger="every 1s" hx-swap="innerHTML" hx-get="/status" hx-target="#status">
+        <div class="column" id="status" hx-trigger="every 100s" hx-swap="innerHTML" hx-get="/status"
+          hx-target="#status">
           {{ block "check-list-item" . }}
           {{ range .Checks }}
           <div class="box">
@@ -89,7 +91,7 @@
       <div class="column">
         <div class="box">
           {{ block "connected" . }}
-          <div class="is-family-monospace is-size-7" id="connected" hx-get="/vpn" hx-trigger="every 1s"
+          <div class="is-family-monospace is-size-7" id="connected" hx-get="/vpn" hx-trigger="every 100s"
             hx-swap="innerHTML">
             {{ . }}
           </div>
@@ -104,11 +106,13 @@
     <div class="columns">
       <div class="column">
         <div class="box" id="log">
-          <div class="is-family-monospace is-size-7" id="log" hx-swap="innerHTML" hx-get="/log" hx-trigger="every 1s">
+          <div class="is-family-monospace is-size-7" id="log" hx-ext="ws" ws-connect="/updatews">
+            <div id="logdetail"></div>
           </div>
         </div>
       </div>
     </div>
+  </div>
   </div>
 </section>
 

@@ -4,9 +4,12 @@ import (
 	"container/ring"
 	"fmt"
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // @Title
@@ -26,10 +29,6 @@ func GetVPN(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 // PostConnect handles a connect post request from the UI, inputs are username, password and one-time-code
 func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "text/html")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-
 		username := r.PostFormValue("username")
 		password := r.PostFormValue("password")
 		otp := r.PostFormValue("one-time-code")
@@ -60,32 +59,76 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		slog.Info("started vpn client")
-		t.ExecuteTemplate(w, "connected", "yes! I'm connected now")
+		t.ExecuteTemplate(w, "connected", "yes! I'm connecting now ...")
 	}
 }
 
 // GetLog gets the log data from a log history circular buffer
 func GetLog(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "text/html")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
 		w.Write([]byte(history.String()))
 	}
 }
 
-// GetIndex serves up the index page
-func GetIndex(checks []Checker) func(w http.ResponseWriter, r *http.Request) {
+// GetUpdateWs
+func GetUpdateWs(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
-		var c []CheckUI
-		for _, i := range checks {
-			c = append(c, i.Status())
+		upgrader := websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
 		}
-		//m := map[string][]CheckUI{
-		//	"Checks": c,
-		//}
-		t.Execute(w, nil)
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); !ok {
+				slog.Error("failed to upgrade to websocket", "error", err)
+			}
+			slog.Error("failed to upgrade to websocket")
+			return
+		}
+		slog.Info("upgraded websocket call")
+		for {
+			data := fmt.Sprintf("<div class=\"is-family-monospace is-size-7\" id=\"logdetail\">%s</div>",
+				history.String())
+			err = ws.WriteMessage(websocket.TextMessage, []byte(data))
+			if err != nil {
+				slog.Error("failed to write to websocket", "error", err)
+				return
+			}
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
+// Display takes care of all HTML display tasks
+type Display struct {
+	TemplateFile string
+	Template     *template.Template
+}
+
+func NewDisplay(templateFile string) (*Display, error) {
+	d := &Display{
+		TemplateFile: templateFile,
+	}
+	t, err := template.ParseFS(templateFS, d.TemplateFile)
+	if err != nil {
+		slog.Error("failed to parse template", "filename", templateFile)
+	}
+	d.Template = t
+	return d, err
+}
+
+func (d *Display) Index(w io.Writer, checks []Checker) {
+	var c []CheckUI
+	for _, i := range checks {
+		c = append(c, i.Status())
+	}
+	d.Template.Execute(w, nil)
+}
+
+// GetIndex serves up the index page
+func GetIndex(d *Display, checks []Checker) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		d.Index(w, checks)
 	}
 }
 
@@ -94,7 +137,6 @@ func GetLogStream(history *LogHistory) func(w http.ResponseWriter, r *http.Reque
 	return func(w http.ResponseWriter, r *http.Request) {
 		var h *ring.Ring = history.History
 		rc := http.NewResponseController(w)
-		w.Header().Set("X-Content-Type-Options", "nosniff")
 		for {
 			for {
 				if h == history.History {
@@ -109,52 +151,20 @@ func GetLogStream(history *LogHistory) func(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+func (d *Display) VPNStatus(w io.Writer, checks []Checker) {
+	var c []CheckUI
+	for _, i := range checks {
+		c = append(c, i.Status())
+	}
+	m := map[string][]CheckUI{
+		"Checks": c,
+	}
+	d.Template.ExecuteTemplate(w, "check-list-item", m)
+}
+
 // GetVPNStatus is currently a test thingumy
-func GetVPNStatus(checks []Checker) func(w http.ResponseWriter, r *http.Request) {
+func GetVPNStatus(d *Display, checks []Checker) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "text/html")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
-		var c []CheckUI
-		for _, i := range checks {
-			c = append(c, i.Status())
-		}
-		m := map[string][]CheckUI{
-			"Checks": c,
-		}
-		t.ExecuteTemplate(w, "check-list-item", m)
+		d.VPNStatus(w, checks)
 	}
 }
-
-/*
-// RunningQueryTableHandler will output the running queries in a datatable
-func RunningQueryTableHandler(slow *MongoSlow) func(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.New("table").Parse(queriesHTML))
-	return func(w http.ResponseWriter, r *http.Request) {
-		var queries []*Query
-		for _, query := range slow.runningQueries {
-			queries = append(queries, query)
-		}
-		w.Header().Set("content-type", "text/html")
-		j, _ := json.Marshal(queries)
-		t.Execute(w, string(j))
-	}
-}
-
-// HistoryQueryTableHandler will output the running queries in a datatable
-func HistoryQueryTableHandler(slow *MongoSlow) func(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.New("table").Parse(queriesHTML))
-	return func(w http.ResponseWriter, r *http.Request) {
-		var queries []*Query
-		slow.history.Do(func(p interface{}) {
-			if p != nil {
-				queries = append(queries, p.(*Query))
-			}
-		})
-		w.Header().Set("content-type", "text/html")
-		j, _ := json.Marshal(queries)
-		t.Execute(w, string(j))
-	}
-}
-*/
