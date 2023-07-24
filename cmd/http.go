@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"container/ring"
 	"fmt"
 	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,15 +19,6 @@ import (
 // @Author
 // @Update
 
-func GetVPN(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if o.running && o.cmd != nil {
-			w.Write([]byte("I'm running"))
-			w.Write([]byte(fmt.Sprintf("%v", o.cmd.Process.Pid)))
-		}
-	}
-}
-
 // PostConnect handles a connect post request from the UI, inputs are username, password and one-time-code
 func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -35,15 +28,15 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 
 		slog.Info("received connect request", "username", username)
 
-		// reset the credentials form
-		t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
-		t.ExecuteTemplate(w, "credentials", nil)
-
 		c := Credentials{
 			Username:    username,
 			Password:    password,
 			OneTimeCode: otp,
 		}
+
+		// reset the credentials form
+		t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
+		t.ExecuteTemplate(w, "credentials", nil)
 
 		filename := "/tmp/chyde.conf"
 		err := c.Store(filename)
@@ -59,6 +52,8 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		slog.Info("started vpn client")
+
+		// update connected panel
 		t.ExecuteTemplate(w, "connected", "yes! I'm connecting now ...")
 	}
 }
@@ -66,13 +61,14 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 // GetLog gets the log data from a log history circular buffer
 func GetLog(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(history.String()))
+		w.Write([]byte(strings.Join(history.Lines(), "\n")))
 	}
 }
 
 // GetUpdateWs
-func GetUpdateWs(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
+func GetUpdateWs(d *Display, history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		now := d.Updates
 		upgrader := websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -87,12 +83,24 @@ func GetUpdateWs(history *LogHistory) func(w http.ResponseWriter, r *http.Reques
 		}
 		slog.Info("upgraded websocket call")
 		for {
-			data := fmt.Sprintf("<div class=\"is-family-monospace is-size-7\" id=\"logdetail\">%s</div>",
-				history.String())
-			err = ws.WriteMessage(websocket.TextMessage, []byte(data))
+			w, err := ws.NextWriter(websocket.TextMessage)
 			if err != nil {
-				slog.Error("failed to write to websocket", "error", err)
+				slog.Error("failed to get writer to websocket", "error", err)
 				return
+			}
+			d.Log(w, history)
+			for {
+				if now == d.Updates {
+					break
+				}
+				w, err := ws.NextWriter(websocket.TextMessage)
+				if err != nil {
+					slog.Error("failed to get writer to websocket", "error", err)
+					return
+				}
+				slog.Debug("writing pending ui updates")
+				w.Write(now.Value.([]byte))
+				now = now.Next()
 			}
 			time.Sleep(1 * time.Second)
 		}
@@ -103,6 +111,7 @@ func GetUpdateWs(history *LogHistory) func(w http.ResponseWriter, r *http.Reques
 type Display struct {
 	TemplateFile string
 	Template     *template.Template
+	Updates      *ring.Ring
 }
 
 func NewDisplay(templateFile string) (*Display, error) {
@@ -114,7 +123,31 @@ func NewDisplay(templateFile string) (*Display, error) {
 		slog.Error("failed to parse template", "filename", templateFile)
 	}
 	d.Template = t
+	d.Updates = ring.New(5)
 	return d, err
+}
+
+type VPNUI struct {
+	PID    string
+	Status string
+}
+
+func (d *Display) VPN(w io.Writer, o *OpenVPN) {
+	v := VPNUI{
+		PID:    "something or other",
+		Status: "kind of running",
+	}
+	if o.running && o.cmd != nil {
+		v.PID = fmt.Sprintf("%v", o.cmd.Process.Pid)
+		v.Status = "OpenVPN process is running!"
+	}
+	d.ExecuteTemplateUpdate(w, "vpn", v)
+}
+
+func GetVPN(d *Display, o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		d.VPN(w, o)
+	}
 }
 
 func (d *Display) Index(w io.Writer, checks []Checker) {
@@ -123,6 +156,20 @@ func (d *Display) Index(w io.Writer, checks []Checker) {
 		c = append(c, i.Status())
 	}
 	d.Template.Execute(w, nil)
+}
+
+type LogUI struct {
+	Line string
+}
+
+func (d *Display) Log(w io.Writer, history *LogHistory) {
+	var h []LogUI
+	lines := history.Lines()
+	for _, line := range lines {
+		h = append(h, LogUI{Line: line})
+	}
+	m := map[string][]LogUI{"Log": h}
+	d.Template.ExecuteTemplate(w, "log", m)
 }
 
 // GetIndex serves up the index page
@@ -151,6 +198,14 @@ func GetLogStream(history *LogHistory) func(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+func (d *Display) ExecuteTemplateUpdate(w io.Writer, fragment string, data any) {
+	var buf bytes.Buffer
+	mw := io.MultiWriter(&buf, w)
+	d.Template.ExecuteTemplate(mw, fragment, data)
+	d.Updates.Value = buf.Bytes()
+	d.Updates = d.Updates.Next()
+}
+
 func (d *Display) VPNStatus(w io.Writer, checks []Checker) {
 	var c []CheckUI
 	for _, i := range checks {
@@ -159,7 +214,7 @@ func (d *Display) VPNStatus(w io.Writer, checks []Checker) {
 	m := map[string][]CheckUI{
 		"Checks": c,
 	}
-	d.Template.ExecuteTemplate(w, "check-list-item", m)
+	d.ExecuteTemplateUpdate(w, "check-list-item", m)
 }
 
 // GetVPNStatus is currently a test thingumy
@@ -167,4 +222,10 @@ func GetVPNStatus(d *Display, checks []Checker) func(w http.ResponseWriter, r *h
 	return func(w http.ResponseWriter, r *http.Request) {
 		d.VPNStatus(w, checks)
 	}
+}
+
+type NullWriter struct{}
+
+func (nw *NullWriter) Write(data []byte) (n int, err error) {
+	return len(data), nil
 }

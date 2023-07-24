@@ -66,9 +66,8 @@
           </form>
         </div>
         {{ end }}
-        <div class="column" id="status" hx-trigger="every 100s" hx-swap="innerHTML" hx-get="/status"
-          hx-target="#status">
-          {{ block "check-list-item" . }}
+        {{ block "check-list-item" . }}
+        <div class="column" id="status">
           {{ range .Checks }}
           <div class="box">
             <div class="icon-text">
@@ -79,8 +78,8 @@
             </div>
           </div>
           {{ end }}
-          {{ end }}
         </div>
+        {{ end }}
       </div>
     </div>
   </section>
@@ -90,10 +89,9 @@
     <div class="columns">
       <div class="column">
         <div class="box">
-          {{ block "connected" . }}
-          <div class="is-family-monospace is-size-7" id="connected" hx-get="/vpn" hx-trigger="every 100s"
-            hx-swap="innerHTML">
-            {{ . }}
+          {{ block "vpn" . }}
+          <div class="is-family-monospace is-size-7" id="connected">
+            {{ .PID }} {{ .Status }}
           </div>
           {{ end }}
         </div>
@@ -105,9 +103,15 @@
   <div class="container">
     <div class="columns">
       <div class="column">
-        <div class="box" id="log">
-          <div class="is-family-monospace is-size-7" id="log" hx-ext="ws" ws-connect="/updatews">
-            <div id="logdetail"></div>
+        <div class="box">
+          <div hx-ext="ws" ws-connect="/updatews">
+            {{ block "log" . }}
+            <div class="is-family-monospace is-size-7" id="log">
+              {{ range .Log }}
+              {{ .Line }}<br>
+              {{ end }}
+            </div>
+            {{ end }}
           </div>
         </div>
       </div>

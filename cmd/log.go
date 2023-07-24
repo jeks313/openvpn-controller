@@ -2,7 +2,6 @@ package main
 
 import (
 	"container/ring"
-	"strings"
 )
 
 // @Title
@@ -33,18 +32,12 @@ func (h *LogHistory) Write(buf []byte) (n int, err error) {
 }
 
 // String converts the full buffer to a single string output for display in a web page
-func (h *LogHistory) String() string {
+func (h *LogHistory) Lines() []string {
 	var lines []string
-	var b strings.Builder
 	h.History.Do(func(p interface{}) {
 		if p != nil {
 			lines = append(lines, string(p.(string)))
 		}
 	})
-
-	for i := len(lines); i > 0; i-- {
-		b.WriteString(lines[i-1])
-		b.WriteString("<br>")
-	}
-	return b.String()
+	return lines
 }

@@ -103,32 +103,36 @@ func main() {
 	checks = append(checks, sandboxPing)
 	checks = append(checks, sandboxDNS)
 
+	vpn := NewOpenVPN("")
+	display, err := NewDisplay("templates/openvpn.html")
+
+	if err != nil {
+		slog.Error("failed to initialize display", "error", err)
+		os.Exit(1)
+	}
+
 	go func() {
+		var nw *NullWriter
 		for {
 			for _, check := range checks {
 				err := check.Check()
 				if err != nil {
 					slog.Error("failed to run check", "error", err)
 				}
-				time.Sleep(5 * time.Second)
 			}
+			display.VPNStatus(nw, checks)
+			display.VPN(nw, vpn)
+			time.Sleep(5 * time.Second)
 		}
 	}()
-
-	vpn := NewOpenVPN("")
-	display, err := NewDisplay("templates/openvpn.html")
-	if err != nil {
-		slog.Error("failed to initialize display", "error", err)
-		os.Exit(1)
-	}
 
 	r.HandleFunc("/status", GetVPNStatus(display, checks))
 	r.HandleFunc("/", GetIndex(display, checks))
 	r.HandleFunc("/connect", PostConnect(vpn))
 	r.HandleFunc("/log", GetLog(history))
-	r.HandleFunc("/updatews", GetUpdateWs(history))
+	r.HandleFunc("/updatews", GetUpdateWs(display, history))
 	r.HandleFunc("/logstream", GetLogStream(history))
-	r.HandleFunc("/vpn", GetVPN(vpn))
+	r.HandleFunc("/vpn", GetVPN(display, vpn))
 
 	log.Info("started server ...", "port", opts.Port)
 
