@@ -52,9 +52,6 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		slog.Info("started vpn client")
-
-		// update connected panel
-		t.ExecuteTemplate(w, "connected", "yes! I'm connecting now ...")
 	}
 }
 

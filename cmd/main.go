@@ -11,6 +11,8 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/foomo/simplecert"
+	"github.com/foomo/tlsconfig"
 	"github.com/gorilla/mux"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/options"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/server"
@@ -66,13 +68,49 @@ func main() {
 	// metrics
 	server.Metrics(r, "/metrics")
 
+	// SSL
+	cfg := simplecert.Default
+	cfg.Domains = []string{"plasma.home.hyde.ca"}
+	cfg.CacheDir = "/etc/letsencrypt/live"
+	cfg.SSLEmail = "chris@hyde.ca"
+	cfg.DNSProvider = "cloudflare"
+	cfg.TLSAddress = ""
+	cfg.HTTPAddress = ""
+
+	// need these environment variables set
+	// CLOUDFLARE_EMAIL=you@example.com CLOUDFLARE_API_KEY=1234.....abcd
+
+	cloudflareEmail := os.Getenv("CLOUDFLARE_EMAIL")
+	cloudflareAPIKey := os.Getenv("CLOUDFLARE_API_KEY")
+
+	if cloudflareEmail == "" {
+		slog.Error("please set CLOUDFLARE_EMAIL environment variable")
+		os.Exit(1)
+	}
+
+	if cloudflareAPIKey == "" {
+		slog.Error("please set CLOUDFLARE_API_KEY environment variable")
+		os.Exit(1)
+	}
+
+	certReloader, err := simplecert.Init(cfg, nil)
+	if err != nil {
+		slog.Error("failed to initialize cert reloader", "error", err)
+		os.Exit(1)
+	}
+
+	tlsConf := tlsconfig.NewServerTLSConfig(tlsconfig.TLSModeServerStrict)
+	tlsConf.GetCertificate = certReloader.GetCertificateFunc()
+
 	listen := fmt.Sprintf(":%d", opts.Port)
 
 	srv := &http.Server{
 		Handler:      r,
 		Addr:         listen,
 		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second}
+		ReadTimeout:  15 * time.Second,
+		TLSConfig:    tlsConf,
+	}
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -136,7 +174,7 @@ func main() {
 
 	log.Info("started server ...", "port", opts.Port)
 
-	if err = srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err = srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 		log.Error("failed to start http server", "error", err)
 		os.Exit(1)
 	}
