@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenVPN Controller Web UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/openvpn-controller/env
+ExecStartPre=/usr/bin/cp /etc/openvpn-controller/cadc.ovpn /tmp/cadc.ovpn
+ExecStart=/usr/local/bin/health -d
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/tmp /etc/letsencrypt/live
+
+[Install]
+WantedBy=multi-user.target
