@@ -1,5 +1,5 @@
 #!/usr/bin/expect -f
 
 set timeout -1
-spawn openvpn /tmp/cadc.ovpn
+spawn openvpn /etc/openvpn-controller/cadc.ovpn
 interact

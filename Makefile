@@ -14,6 +14,7 @@ install: build
 	install -d /etc/openvpn-controller
 	test -f /etc/openvpn-controller/env || install -m 600 env.example /etc/openvpn-controller/env
 	install -m 644 cadc.ovpn /etc/openvpn-controller/cadc.ovpn
+	install -m 755 expect.sh /etc/openvpn-controller/expect.sh
 	install -m 644 openvpn-controller.service /etc/systemd/system/openvpn-controller.service
 	systemctl daemon-reload
 
