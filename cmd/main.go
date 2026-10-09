@@ -11,8 +11,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/foomo/simplecert"
-	"github.com/foomo/tlsconfig"
 	"github.com/gorilla/mux"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/options"
 	"github.com/jeks313/go-mongo-slow-queries/pkg/server"
@@ -28,6 +26,8 @@ type OpenVPNOpts struct {
 
 var opts struct {
 	Port        int                        `long:"port" env:"PORT" default:"9172" description:"port number to listen on"`
+	Address     string                     `long:"address" env:"ADDRESS" default:"" description:"address to bind to (default all)"`
+	PlainHTTP   bool                       `long:"plain-http" env:"PLAIN_HTTP" description:"serve plain HTTP, for running behind a TLS-terminating proxy"`
 	Application options.ApplicationOptions `group:"Default Application Options"`
 	OpenVPN     OpenVPNOpts                `group:"OpenvVPN Options"`
 }
@@ -68,48 +68,25 @@ func main() {
 	// metrics
 	server.Metrics(r, "/metrics")
 
-	// SSL
-	cfg := simplecert.Default
-	cfg.Domains = []string{"plasma.home.hyde.ca"}
-	cfg.CacheDir = "/etc/letsencrypt/live"
-	cfg.SSLEmail = "chris@hyde.ca"
-	cfg.DNSProvider = "cloudflare"
-	cfg.TLSAddress = ""
-	cfg.HTTPAddress = ""
+	r.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte("ok"))
+	})
 
-	// need these environment variables set
-	// CLOUDFLARE_EMAIL=you@example.com CLOUDFLARE_API_KEY=1234.....abcd
-
-	cloudflareEmail := os.Getenv("CLOUDFLARE_EMAIL")
-	cloudflareAPIKey := os.Getenv("CLOUDFLARE_API_KEY")
-
-	if cloudflareEmail == "" {
-		slog.Error("please set CLOUDFLARE_EMAIL environment variable")
-		os.Exit(1)
-	}
-
-	if cloudflareAPIKey == "" {
-		slog.Error("please set CLOUDFLARE_API_KEY environment variable")
-		os.Exit(1)
-	}
-
-	certReloader, err := simplecert.Init(cfg, nil)
-	if err != nil {
-		slog.Error("failed to initialize cert reloader", "error", err)
-		os.Exit(1)
-	}
-
-	tlsConf := tlsconfig.NewServerTLSConfig(tlsconfig.TLSModeServerStrict)
-	tlsConf.GetCertificate = certReloader.GetCertificateFunc()
-
-	listen := fmt.Sprintf(":%d", opts.Port)
+	listen := fmt.Sprintf("%s:%d", opts.Address, opts.Port)
 
 	srv := &http.Server{
 		Handler:      r,
 		Addr:         listen,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
-		TLSConfig:    tlsConf,
+	}
+
+	if !opts.PlainHTTP {
+		tlsConf, err := selfManagedTLS()
+		if err != nil {
+			os.Exit(1)
+		}
+		srv.TLSConfig = tlsConf
 	}
 
 	ctx := context.Background()
@@ -135,8 +112,8 @@ func main() {
 
 	var checks []Checker
 
-	sandboxPing := NewPing("vcr1sandbox1.absolute.com")
-	sandboxDNS := NewDNS("vcr1sandbox1.absolute.com")
+	sandboxPing := NewPing("10.13.132.150")
+	sandboxDNS := NewDNS("aws1grafana1.absolute.com")
 
 	checks = append(checks, sandboxPing)
 	checks = append(checks, sandboxDNS)
@@ -172,9 +149,14 @@ func main() {
 	r.HandleFunc("/logstream", GetLogStream(history))
 	r.HandleFunc("/vpn", GetVPN(display, vpn))
 
-	log.Info("started server ...", "port", opts.Port)
+	log.Info("started server ...", "address", listen, "plain_http", opts.PlainHTTP)
 
-	if err = srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+	if opts.PlainHTTP {
+		err = srv.ListenAndServe()
+	} else {
+		err = srv.ListenAndServeTLS("", "")
+	}
+	if err != nil && err != http.ErrServerClosed {
 		log.Error("failed to start http server", "error", err)
 		os.Exit(1)
 	}
