@@ -19,6 +19,17 @@ RUN pacman -Syu --noconfirm --needed openvpn expect \
     && pacman -Scc --noconfirm \
     && rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/*
 
+# dns-updown only picks resolved when /etc/resolv.conf is a symlink into
+# systemd; in a pod kubelet bind-mounts a plain file there, so it would fall
+# back to rewriting the container's resolv.conf and the work DNS would never
+# reach the host. Test for resolved's varlink socket (mounted from the host)
+# instead. grep -q first so a changed upstream script fails the build rather
+# than silently skipping the patch.
+RUN f=/usr/lib/openvpn/dns-updown \
+    && grep -q 'readlink /etc/resolv.conf)" =~ systemd' "$f" \
+    && sed -i 's|\[\[ "$(readlink /etc/resolv.conf)" =~ systemd \]\]|[[ -S /run/systemd/resolve/io.systemd.Resolve ]]|' "$f" \
+    && grep -q 'S /run/systemd/resolve/io.systemd.Resolve' "$f"
+
 WORKDIR /app
 COPY --from=build --chmod=755 /out/openvpn-controller /app/openvpn-controller
 # The controller runs ./expect.sh from its working directory; expect.sh runs
