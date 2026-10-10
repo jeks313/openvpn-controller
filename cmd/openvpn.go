@@ -124,7 +124,10 @@ func (o *OpenVPN) Start(otp string) error {
 					if !challenge {
 						slog.Debug("comparing", "line", strings.TrimSpace(string(before)), "expect", waitFor)
 
-						if string(before[:len(waitFor)]) == waitFor {
+						// Prefix match on the trimmed line: the prompt arrives
+						// with or without a trailing space depending on the
+						// openvpn build, and often without its line ending.
+						if strings.HasPrefix(strings.TrimSpace(string(before)), strings.TrimSpace(waitFor)) {
 							slog.Info("sending otp code...")
 							stdin.Write([]byte(otp))
 							stdin.Write([]byte("\n"))
