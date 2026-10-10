@@ -1,0 +1,32 @@
+name: ci
+
+# Renovate merges its own non-major PRs only when this is green. Merging never
+# deploys: the pod is restarted by hand, since a restart drops the work VPN and
+# needs a fresh OTP code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          # Keep in step with the golang: tag in the Dockerfile.
+          go-version: "1.27.2"
+      - run: go vet ./...
+      - run: go test ./...
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: docker build -t openvpn-controller:ci .
