@@ -19,6 +19,10 @@ RUN pacman -Syu --noconfirm --needed openvpn expect \
     && pacman -Scc --noconfirm \
     && rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/*
 
+# libcap's captree is a Go binary Arch builds with an old toolchain, so it
+# carries ~23 stdlib CVEs into the image scan. Nothing here runs it.
+RUN rm -f /usr/bin/captree
+
 # dns-updown only picks resolved when /etc/resolv.conf is a symlink into
 # systemd; in a pod kubelet bind-mounts a plain file there, so it would fall
 # back to rewriting the container's resolv.conf and the work DNS would never
