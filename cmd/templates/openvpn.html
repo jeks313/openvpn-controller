@@ -10,7 +10,6 @@
   <script src="https://unpkg.com/htmx.org@1.9.3"
     integrity="sha384-lVb3Rd/Ca0AxaoZg5sACe8FJKF0tnUgR2Kd7ehUOG5GCcROv5uBIZsOqovBAcWua"
     crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
   <style>
     :root {
       --bg-body: #ffffff;
@@ -124,6 +123,21 @@
         document.documentElement.setAttribute('data-theme', 'dark');
       }
     })();
+  </script>
+  <script>
+    // Each /updates event carries rendered fragments; replace the element
+    // with the same id, as the old websocket extension's out-of-band swap did.
+    new EventSource('/updates').onmessage = function (e) {
+      var tpl = document.createElement('template');
+      tpl.innerHTML = e.data;
+      Array.from(tpl.content.children).forEach(function (el) {
+        var old = el.id && document.getElementById(el.id);
+        if (old) {
+          old.replaceWith(el);
+          htmx.process(el);
+        }
+      });
+    };
   </script>
   <script>
     htmx.logger = function (elt, event, data) {
@@ -241,7 +255,7 @@
     <div class="columns">
       <div class="column">
         <div class="box">
-          <div hx-ext="ws" ws-connect="/updatews">
+          <div>
             {{ block "log" . }}
             <div class="is-family-monospace is-size-7" id="log">
               {{ range .Log }}

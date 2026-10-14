@@ -40,6 +40,5 @@ COPY --from=build --chmod=755 /out/openvpn-controller /app/openvpn-controller
 # openvpn against /etc/openvpn-controller/cadc.ovpn, mounted from a Secret.
 COPY --chmod=755 expect.sh /app/expect.sh
 
-ENV PLAIN_HTTP=true
 EXPOSE 9172
 ENTRYPOINT ["/app/openvpn-controller"]

@@ -3,33 +3,35 @@ package main
 import (
 	"context"
 	"embed"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime/debug"
+	"strconv"
 	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/jeks313/go-mongo-slow-queries/pkg/options"
-	"github.com/jeks313/go-mongo-slow-queries/pkg/server"
-	flags "github.com/jessevdk/go-flags"
 )
 
 //go:embed templates
 var templateFS embed.FS
 
-// OpenVPNOpts is all the mongo specific connection options
-type OpenVPNOpts struct {
+var opts struct {
+	Port    int
+	Address string
+	Debug   bool
+	Version bool
 }
 
-var opts struct {
-	Port        int                        `long:"port" env:"PORT" default:"9172" description:"port number to listen on"`
-	Address     string                     `long:"address" env:"ADDRESS" default:"" description:"address to bind to (default all)"`
-	PlainHTTP   bool                       `long:"plain-http" env:"PLAIN_HTTP" description:"serve plain HTTP, for running behind a TLS-terminating proxy"`
-	Application options.ApplicationOptions `group:"Default Application Options"`
-	OpenVPN     OpenVPNOpts                `group:"OpenvVPN Options"`
+// envOr returns the environment variable key, or def when it is unset.
+func envOr(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok {
+		return v
+	}
+	return def
 }
 
 var loggingLevel = new(slog.LevelVar)
@@ -40,33 +42,42 @@ func main() {
 	log := slog.New(slog.NewTextHandler(mw, &slog.HandlerOptions{Level: loggingLevel}))
 	slog.SetDefault(log)
 
-	_, err := flags.ParseArgs(&opts, os.Args[1:])
+	port, err := strconv.Atoi(envOr("PORT", "9172"))
 	if err != nil {
-		log.Error("failed to parse command line arguments", "error", err)
+		log.Error("invalid PORT", "error", err)
 		os.Exit(1)
 	}
+	debugEnv, err := strconv.ParseBool(envOr("DEBUG", "false"))
+	if err != nil {
+		log.Error("invalid DEBUG", "error", err)
+		os.Exit(1)
+	}
+	flag.IntVar(&opts.Port, "port", port, "port number to listen on (env PORT)")
+	flag.StringVar(&opts.Address, "address", envOr("ADDRESS", ""), "address to bind to, default all (env ADDRESS)")
+	flag.BoolVar(&opts.Debug, "debug", debugEnv, "enable debug logging level (env DEBUG)")
+	flag.BoolVar(&opts.Version, "version", false, "print the build's version control info and exit")
+	flag.Parse()
 
-	if opts.Application.Debug {
+	if opts.Debug {
 		loggingLevel.Set(slog.LevelDebug)
 	}
 
-	if opts.Application.Version {
-		options.LogVersion()
+	if opts.Version {
+		if bi, ok := debug.ReadBuildInfo(); ok {
+			for _, s := range bi.Settings {
+				fmt.Printf("%s=%s\n", s.Key, s.Value)
+			}
+		}
 		os.Exit(0)
 	}
 
-	// router
-	r := mux.NewRouter()
-	// r.Use(handlers.CompressHandler)
+	r := http.NewServeMux()
 
-	// setup logging
-	server.Log(r)
-
-	// default end points
-	server.Profiling(r, "/debug/pprof")
-
-	// metrics
-	server.Metrics(r, "/metrics")
+	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	r.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("ok"))
@@ -75,18 +86,10 @@ func main() {
 	listen := fmt.Sprintf("%s:%d", opts.Address, opts.Port)
 
 	srv := &http.Server{
-		Handler:      r,
+		Handler:      logRequests(r),
 		Addr:         listen,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
-	}
-
-	if !opts.PlainHTTP {
-		tlsConf, err := selfManagedTLS()
-		if err != nil {
-			os.Exit(1)
-		}
-		srv.TLSConfig = tlsConf
 	}
 
 	ctx := context.Background()
@@ -142,20 +145,16 @@ func main() {
 	}()
 
 	r.HandleFunc("/status", GetVPNStatus(display, checks))
-	r.HandleFunc("/", GetIndex(display, checks))
+	r.HandleFunc("/{$}", GetIndex(display, checks))
 	r.HandleFunc("/connect", PostConnect(vpn))
 	r.HandleFunc("/log", GetLog(history))
-	r.HandleFunc("/updatews", GetUpdateWs(display, history))
+	r.HandleFunc("/updates", GetUpdates(display, history))
 	r.HandleFunc("/logstream", GetLogStream(history))
 	r.HandleFunc("/vpn", GetVPN(display, vpn))
 
-	log.Info("started server ...", "address", listen, "plain_http", opts.PlainHTTP)
+	log.Info("started server ...", "address", listen)
 
-	if opts.PlainHTTP {
-		err = srv.ListenAndServe()
-	} else {
-		err = srv.ListenAndServeTLS("", "")
-	}
+	err = srv.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		log.Error("failed to start http server", "error", err)
 		os.Exit(1)

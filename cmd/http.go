@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 // @Title
@@ -62,46 +60,50 @@ func GetLog(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetUpdateWs
-func GetUpdateWs(d *Display, history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
+// GetUpdates streams UI fragments to the page as server-sent events: the log
+// every second, plus any check/VPN fragments rendered since the last pass. The
+// page swaps each top-level element in by its id.
+func GetUpdates(d *Display, history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		now := d.Updates
-		upgrader := websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
-		}
-		ws, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); !ok {
-				slog.Error("failed to upgrade to websocket", "error", err)
-			}
-			slog.Error("failed to upgrade to websocket")
+		rc := http.NewResponseController(w)
+		// The server's WriteTimeout would otherwise end the stream after 15s.
+		if err := rc.SetWriteDeadline(time.Time{}); err != nil {
+			slog.Error("failed to clear write deadline for event stream", "error", err)
 			return
 		}
-		slog.Info("upgraded websocket call")
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		slog.Info("opened update stream")
 		for {
-			w, err := ws.NextWriter(websocket.TextMessage)
-			if err != nil {
-				slog.Error("failed to get writer to websocket", "error", err)
-				return
-			}
-			d.Log(w, history)
-			for {
-				if now == d.Updates {
-					break
-				}
-				w, err := ws.NextWriter(websocket.TextMessage)
-				if err != nil {
-					slog.Error("failed to get writer to websocket", "error", err)
-					return
-				}
+			var buf bytes.Buffer
+			d.Log(&buf, history)
+			for now != d.Updates {
 				slog.Debug("writing pending ui updates")
-				w.Write(now.Value.([]byte))
+				buf.Write(now.Value.([]byte))
 				now = now.Next()
 			}
-			time.Sleep(1 * time.Second)
+			writeEvent(w, buf.Bytes())
+			if err := rc.Flush(); err != nil {
+				slog.Error("failed to flush update stream", "error", err)
+				return
+			}
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(1 * time.Second):
+			}
 		}
 	}
+}
+
+// writeEvent writes data as one server-sent event; every line needs its own
+// "data:" prefix.
+func writeEvent(w io.Writer, data []byte) {
+	for _, line := range bytes.Split(data, []byte("\n")) {
+		fmt.Fprintf(w, "data: %s\n", line)
+	}
+	io.WriteString(w, "\n")
 }
 
 // Display takes care of all HTML display tasks
