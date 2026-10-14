@@ -1627,6 +1627,8 @@ github.com/sagikazarmark/locafero v0.12.0 h1:/NQhBAkUb4+fH1jivKHWusDYFjMOOKU88ee
 github.com/sagikazarmark/locafero v0.12.0/go.mod h1:sZh36u/YSZ918v0Io+U9ogLYQJ9tLLBmM4eneO6WwsI=
 github.com/scaleway/scaleway-sdk-go v1.38.0 h1:8ddHz9QKDjEgSvqWN0uthFkuz476gVwcGhCMc2JYJeY=
 github.com/scaleway/scaleway-sdk-go v1.38.0/go.mod h1:ly2TNjJyW0SouDBZcQb2aNgqJYqI5t3BZF/UzBKFZ8o=
+github.com/scaleway/scaleway-sdk-go v1.39.0 h1:HCoThqjNYqx+tFcI+JadoqdRN5UBHmC4Ee9lgqEqglw=
+github.com/scaleway/scaleway-sdk-go v1.39.0/go.mod h1:ly2TNjJyW0SouDBZcQb2aNgqJYqI5t3BZF/UzBKFZ8o=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 h1:nn5Wsu0esKSJiIVhscUtVbo7ada43DJhG55ua/hjS5I=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/selectel/domains-go v1.1.0 h1:futG50J43ALLKQAnZk9H9yOtLGnSUh7c5hSvuC5gSHo=
@@ -1753,6 +1755,8 @@ github.com/xdg-go/stringprep v1.0.4/go.mod h1:mPGuuIYwz7CmR2bT9j4GbQqutWS1zV24gi
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/yandex-cloud/go-genproto v0.126.0 h1:zj9uX2IT0bbbHnqmK2xzxsddsZVtq6EZoeAxhZcdQs8=
 github.com/yandex-cloud/go-genproto v0.126.0/go.mod h1:0LDD/IZLIUIV4iPH+YcF+jysO3jkSvADFGm4dCAuwQo=
+github.com/yandex-cloud/go-genproto v0.127.0 h1:SQQE9nG8F8XvbvvtcMkNt9b8S27adbgY2+Odx/CzD48=
+github.com/yandex-cloud/go-genproto v0.127.0/go.mod h1:0LDD/IZLIUIV4iPH+YcF+jysO3jkSvADFGm4dCAuwQo=
 github.com/yandex-cloud/go-sdk/services/dns v0.0.102 h1:5elDvtR9ByPjQ9i0s3A7meN0DXbXeueJP2H+T89V7cA=
 github.com/yandex-cloud/go-sdk/services/dns v0.0.102/go.mod h1:6sDoAXDMvUcNZQZwyu5CrUWhvswABZZnP8JrC8Bic40=
 github.com/yandex-cloud/go-sdk/v2 v2.181.0 h1:5U88BGQGTGCyRQtikcjdPmc6rncO8f04FpGIuT3/FFI=

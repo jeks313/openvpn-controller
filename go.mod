@@ -190,7 +190,7 @@ require (
 	github.com/sacloud/packages-go v0.1.1 // indirect
 	github.com/sacloud/saclient-go v0.4.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
-	github.com/scaleway/scaleway-sdk-go v1.38.0 // indirect
+	github.com/scaleway/scaleway-sdk-go v1.39.0 // indirect
 	github.com/selectel/domains-go v1.1.0 // indirect
 	github.com/selectel/go-selvpcclient/v4 v4.2.0 // indirect
 	github.com/shopspring/decimal v1.5.0 // indirect
@@ -213,7 +213,7 @@ require (
 	github.com/vinyldns/go-vinyldns v0.9.18 // indirect
 	github.com/volcengine/volc-sdk-golang v1.0.257 // indirect
 	github.com/vultr/govultr/v3 v3.33.2 // indirect
-	github.com/yandex-cloud/go-genproto v0.126.0 // indirect
+	github.com/yandex-cloud/go-genproto v0.127.0 // indirect
 	github.com/yandex-cloud/go-sdk/services/dns v0.0.102 // indirect
 	github.com/yandex-cloud/go-sdk/v2 v2.181.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
