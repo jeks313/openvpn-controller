@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -19,24 +20,25 @@ type Credentials struct {
 }
 
 func (c Credentials) Store(filename string) error {
-	f, err := os.Create(filename)
+	// Created 0600 rather than chmod'ed after, so the password is never
+	// readable by others, even briefly.
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		slog.Error("failed to create credentials file", "error", err)
 		return err
 	}
-	defer func() {
-		err = f.Close()
-	}()
-	err = f.Chmod(0600)
-	if err != nil {
+	// O_CREATE leaves an existing file's mode alone.
+	if err := f.Chmod(0o600); err != nil {
 		slog.Error("failed to chmod file", "error", err)
+		f.Close()
 		return err
 	}
-	f.Write([]byte(c.Username))
-	f.Write([]byte("\n"))
-	f.Write([]byte(c.Password))
-	f.Write([]byte("\n"))
-	return err
+	if _, err := fmt.Fprintf(f, "%s\n%s\n", c.Username, c.Password); err != nil {
+		slog.Error("failed to write credentials file", "error", err)
+		f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 // OpenVPN is the main openvpn controller
@@ -129,8 +131,9 @@ func (o *OpenVPN) Start(otp string) error {
 						// openvpn build, and often without its line ending.
 						if strings.HasPrefix(strings.TrimSpace(string(before)), strings.TrimSpace(waitFor)) {
 							slog.Info("sending otp code...")
-							stdin.Write([]byte(otp))
-							stdin.Write([]byte("\n"))
+							if _, err := io.WriteString(stdin, otp+"\n"); err != nil {
+								slog.Error("failed to send otp code", "error", err)
+							}
 							challenge = true
 							o.running = true
 						}

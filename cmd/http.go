@@ -34,7 +34,9 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 
 		// reset the credentials form
 		t := template.Must(template.ParseFS(templateFS, "templates/openvpn.html"))
-		t.ExecuteTemplate(w, "credentials", nil)
+		if err := t.ExecuteTemplate(w, "credentials", nil); err != nil {
+			slog.Error("render credentials", "error", err)
+		}
 
 		filename := "/tmp/chyde.conf"
 		err := c.Store(filename)
@@ -46,7 +48,9 @@ func PostConnect(o *OpenVPN) func(w http.ResponseWriter, r *http.Request) {
 		err = o.Start(c.OneTimeCode)
 		if err != nil {
 			slog.Error("failed to start openvpn client", "error", err)
-			t.ExecuteTemplate(w, "connected", fmt.Sprintf("failed to connect %v", err))
+			if err := t.ExecuteTemplate(w, "connected", fmt.Sprintf("failed to connect %v", err)); err != nil {
+				slog.Error("render connected", "error", err)
+			}
 			return
 		}
 		slog.Info("started vpn client")
@@ -103,7 +107,7 @@ func writeEvent(w io.Writer, data []byte) {
 	for _, line := range bytes.Split(data, []byte("\n")) {
 		fmt.Fprintf(w, "data: %s\n", line)
 	}
-	io.WriteString(w, "\n")
+	_, _ = io.WriteString(w, "\n")
 }
 
 // Display takes care of all HTML display tasks
@@ -150,11 +154,9 @@ func GetVPN(d *Display, o *OpenVPN) func(w http.ResponseWriter, r *http.Request)
 }
 
 func (d *Display) Index(w io.Writer, checks []Checker) {
-	var c []CheckUI
-	for _, i := range checks {
-		c = append(c, i.Status())
+	if err := d.Template.Execute(w, nil); err != nil {
+		slog.Error("render index", "error", err)
 	}
-	d.Template.Execute(w, nil)
 }
 
 type LogUI struct {
@@ -168,7 +170,9 @@ func (d *Display) Log(w io.Writer, history *LogHistory) {
 		h = append(h, LogUI{Line: line})
 	}
 	m := map[string][]LogUI{"Log": h}
-	d.Template.ExecuteTemplate(w, "log", m)
+	if err := d.Template.ExecuteTemplate(w, "log", m); err != nil {
+		slog.Error("render log", "error", err)
+	}
 }
 
 // GetIndex serves up the index page
@@ -181,14 +185,11 @@ func GetIndex(d *Display, checks []Checker) func(w http.ResponseWriter, r *http.
 // GetLogStream streams the log to the endpoint
 func GetLogStream(history *LogHistory) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var h *ring.Ring = history.History
+		h := history.History
 		rc := http.NewResponseController(w)
 		for {
-			for {
-				if h == history.History {
-					break
-				}
-				w.Write([]byte(h.Value.(string)))
+			for h != history.History {
+				_, _ = w.Write([]byte(h.Value.(string)))
 				h = h.Next()
 			}
 			rc.Flush()
@@ -200,7 +201,9 @@ func GetLogStream(history *LogHistory) func(w http.ResponseWriter, r *http.Reque
 func (d *Display) ExecuteTemplateUpdate(w io.Writer, fragment string, data any) {
 	var buf bytes.Buffer
 	mw := io.MultiWriter(&buf, w)
-	d.Template.ExecuteTemplate(mw, fragment, data)
+	if err := d.Template.ExecuteTemplate(mw, fragment, data); err != nil {
+		slog.Error("render update", "fragment", fragment, "error", err)
+	}
 	d.Updates.Value = buf.Bytes()
 	d.Updates = d.Updates.Next()
 }

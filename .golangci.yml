@@ -1,0 +1,69 @@
+# golangci-lint v2. Run: golangci-lint run ./... (and again with GOOS=windows
+# in repos with _windows.go files). Started from nebula-control-plane's
+# config, minus the checks that are style-only here. The same file is copied
+# into each of the Go repos; change it here first.
+version: "2"
+
+linters:
+  # `standard` = errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  enable:
+    - gocritic     # correctness / style / performance checks
+    - misspell     # typos in comments + strings
+    - unconvert    # redundant type conversions
+    - errorlint    # %w wrapping and errors.Is/As
+    - bodyclose    # HTTP response bodies never closed
+    - copyloopvar  # leftover pre-1.22 loop-variable copies
+    - nilerr       # returning nil after a non-nil error check
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - builtinShadow
+        - unnamedResult
+        - sloppyReassign
+        # filepath.Join("/sys/block", name) is the readable form.
+        - filepathJoin
+        # Types sit next to the handlers that use them, not above them.
+        - typeDefFirst
+        # log.Fatal after defer cancel() in main: the process is exiting anyway.
+        - exitAfterDefer
+        # A local `url` beside net/url reads fine in short functions.
+        - importShadow
+        # [0-9] is clearer than \d and identical in RE2.
+        - regexpSimplify
+        # %#q is not the same as "`%s`": it falls back to "..." quoting.
+        - sprintfQuotedString
+        # (a, b []string) vs (a []string, b []string) is taste.
+        - paramTypeCombine
+    errcheck:
+      exclude-functions:
+        # Closing a handle in a defer has nothing useful to do on failure.
+        - syscall.RegCloseKey
+        - syscall.CloseHandle
+        # A failed response write means the client left; there is no one to tell.
+        - (net/http.ResponseWriter).Write
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - std-error-handling
+    rules:
+      # !(a || b) reads better than De Morgan for character-class checks.
+      - linters: [staticcheck]
+        text: "QF1001:"
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+          - bodyclose
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

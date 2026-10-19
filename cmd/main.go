@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -108,7 +109,9 @@ func main() {
 		case <-c:
 			cancel()
 			log.Info("interrupt, shutting down ...")
-			srv.Shutdown(ctx)
+			if err := srv.Shutdown(ctx); err != nil {
+				log.Error("shutdown", "error", err)
+			}
 		case <-ctx.Done():
 		}
 	}()
@@ -118,8 +121,7 @@ func main() {
 	sandboxPing := NewPing("10.13.132.150")
 	sandboxDNS := NewDNS("aws1grafana1.absolute.com")
 
-	checks = append(checks, sandboxPing)
-	checks = append(checks, sandboxDNS)
+	checks = append(checks, sandboxPing, sandboxDNS)
 
 	vpn := NewOpenVPN("")
 	display, err := NewDisplay("templates/openvpn.html")
@@ -155,7 +157,7 @@ func main() {
 	log.Info("started server ...", "address", listen)
 
 	err = srv.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("failed to start http server", "error", err)
 		os.Exit(1)
 	}

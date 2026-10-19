@@ -39,7 +39,7 @@ func (h *LogHistory) Lines() []string {
 	var lines []string
 	h.History.Do(func(p interface{}) {
 		if p != nil {
-			lines = append(lines, string(p.(string)))
+			lines = append(lines, p.(string))
 		}
 	})
 	return lines
