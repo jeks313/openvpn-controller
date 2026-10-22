@@ -7,7 +7,7 @@
 # runs on the host network and talks to the host's systemd-resolved over the
 # mounted D-Bus socket, so the work domain resolves on spiff exactly as it did
 # when openvpn ran there directly. Arch's openvpn is the same build as the host.
-FROM docker.io/library/golang:1.27-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS build
+FROM docker.io/library/golang:1.27-alpine@sha256:d530cf60723abf1ffae0cd16bb546b379ec0550d2f3815e5b16ed69dbc00fba4 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
