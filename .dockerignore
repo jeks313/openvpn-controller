@@ -3,3 +3,4 @@
 !go.sum
 !cmd/
 !expect.sh
+!dns-split-updown

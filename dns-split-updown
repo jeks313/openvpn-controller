@@ -1,0 +1,32 @@
+#!/bin/bash
+# --dns-updown wrapper: keep the work VPN's DNS to the work domains only.
+#
+# The server pushes DNS servers but no domains. With no resolve-domain the
+# stock dns-updown sets the tunnel as resolved's default route with "~.", so
+# ALL of spiff's lookups go to the work servers and die whenever the tunnel
+# stalls. Supply split domains from VPN_DNS_DOMAINS (space-separated, default
+# "absolute.com failsafe.net") for any server profile that has none, then hand
+# over to the stock script, which turns them into "~domain" with default-route
+# off.
+#
+# OpenVPN sets the dns_* variables itself, so `setenv` in the .ovpn cannot do
+# this; it has to happen in the script's environment.
+
+domains=${VPN_DNS_DOMAINS:-absolute.com failsafe.net}
+
+n=1
+while :; do
+    addr_var=dns_server_${n}_address_1
+    [ -n "${!addr_var}" ] || break
+    first_var=dns_server_${n}_resolve_domain_1
+    if [ -z "${!first_var}" ]; then
+        i=1
+        for d in $domains; do
+            export "dns_server_${n}_resolve_domain_${i}=$d"
+            i=$((i+1))
+        done
+    fi
+    n=$((n+1))
+done
+
+exec /usr/lib/openvpn/dns-updown "$@"

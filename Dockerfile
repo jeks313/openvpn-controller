@@ -39,6 +39,7 @@ COPY --from=build --chmod=755 /out/openvpn-controller /app/openvpn-controller
 # The controller runs ./expect.sh from its working directory; expect.sh runs
 # openvpn against /etc/openvpn-controller/cadc.ovpn, mounted from a Secret.
 COPY --chmod=755 expect.sh /app/expect.sh
+COPY --chmod=755 dns-split-updown /app/dns-split-updown
 
 EXPOSE 9172
 ENTRYPOINT ["/app/openvpn-controller"]
