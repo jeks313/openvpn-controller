@@ -14,7 +14,7 @@ RUN go mod download
 COPY cmd/ ./cmd/
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/openvpn-controller ./cmd
 
-FROM docker.io/library/archlinux:base@sha256:42217d5f09e11d3fe7ad3b309b7fde891d458464dab5d674e629073765610427
+FROM docker.io/library/archlinux:base@sha256:823e937464d1528b306a8e1137ef406b9c56e5fee43c7a19e93684d554af74e1
 RUN pacman -Syu --noconfirm --needed openvpn expect \
     && pacman -Scc --noconfirm \
     && rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/*
